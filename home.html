@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site d'Événements</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="./css/styles1.css">
+</head>
+<body>
+    <div class="container text-center mt-5">
+        <h1>Bienvenue sur notre site d'événements</h1>
+        <p>Découvrez et réservez vos événements préférés en toute simplicité.</p>
+        <button class="btn btn-primary m-2" onclick="openSignupModal()">S'inscrire</button>
+        <button class="btn btn-secondary m-2" onclick="openLoginModal()">Se connecter</button>
+    </div>
+
+    <!-- Modal pour Inscription -->
+    <div id="signupModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('signupModal')">&times;</span>
+            <h2>Inscription</h2>
+            <form id="signupForm">
+                <input type="text" id="signupName" placeholder="Nom" required><br>
+                <input type="text" id="signupLastname" placeholder="Prénom" required><br>
+                <input type="email" id="signupEmail" placeholder="Email" required><br>
+                <input type="password" id="signupPassword" placeholder="Mot de passe" required><br>
+                <button type="button" class="btn btn-primary mt-3" onclick="signupUser()">S'inscrire</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal pour Connexion -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('loginModal')">&times;</span>
+            <h2>Connexion</h2>
+            <form id="loginForm">
+                <input type="email" id="loginEmail" placeholder="Email" required><br>
+                <input type="password" id="loginPassword" placeholder="Mot de passe" required><br>
+                <a href="#" onclick="openPasswordResetModal()">Mot de passe oublié ?</a><br>
+                <button type="button" class="btn btn-secondary mt-3" onclick="loginUser()">Se connecter</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal pour Restauration de Mot de Passe -->
+    <div id="passwordResetModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('passwordResetModal')">&times;</span>
+            <h2>Restauration de Mot de Passe</h2>
+            <form id="passwordResetForm">
+                <input type="text" id="resetLastname" placeholder="Nom" required><br>
+                <input type="email" id="resetEmail" placeholder="Email" required><br>
+                <button type="button" class="btn btn-warning mt-3" onclick="resetPassword()">Restaurer le mot de passe</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="./js/fichierjs1.js"></script>
+    <script >
+         const apiUrl = 'http://127.0.0.1:8000/api';
+
+function openSignupModal() {
+    document.getElementById('signupModal').style.display = 'block';
+}
+
+function openLoginModal() {
+    document.getElementById('loginModal').style.display = 'block';
+}
+
+function openPasswordResetModal() {
+    closeModal('loginModal');
+    document.getElementById('passwordResetModal').style.display = 'block';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+async function signupUser() {
+    const name = document.getElementById('signupName').value;
+    const lastname = document.getElementById('signupLastname').value;
+    const email = document.getElementById('signupEmail').value;
+    const password = document.getElementById('signupPassword').value;
+
+   
+ response = await fetch(`${apiUrl}/usersregister`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            name,
+            lastname,
+            email,
+            password
+        })
+    });
+
+    if (response.ok) {
+        const data = await response.json(); // Récupérer la réponse JSON
+        alert(data.success); // Afficher le message de l'API
+                closeModal('signupModal');
+                document.getElementById('signupForm').reset();
+        
+        closeModal('signupModal');
+        // Vous pouvez éventuellement rediriger l'utilisateur vers une page de succès
+    } else {
+        const errorData = await response.json(); // Récupérer les erreurs de l'API
+        alert(`Erreur lors de l'inscription: ${errorData.message}`);
+    }
+}
+
+// Fonction de connexion
+async function loginUser() {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+ 
+   
+    try {
+         response = await fetch(`${apiUrl}/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                email: email,
+                password: password
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success === '1') {
+                localStorage.setItem('token', data.token); // Stocker le token
+                
+                if(data.user.role==='utilisateur'){
+                    window.location.href = './utilisateur/dashbordUser2.html'; // Rediriger vers le tableau de bord
+                }
+                if(data.user.role ==='admin'){
+                    window.location.href = './super_user/dashbordAdmin.html'; // Rediriger vers le tableau de bord
+                 
+                }
+                
+            } else {
+                alert('Aucun utilisateur trouvé. Veuillez vérifier vos identifiants.');
+            }
+        } else {
+            const errorData = await response.json();
+            alert(`Erreur de connexion: ${errorData.message || 'Erreur inconnue'}`);
+        }
+    } catch (error) {
+        alert(`Erreur : ${error.message}`);
+    }
+}
+
+
+// Fonction de restauration de mot de passe
+async function resetPassword() {
+    const lastname = document.getElementById('resetLastname').value;
+    const email = document.getElementById('resetEmail').value;
+
+    const response = await fetch(`${apiUrl}/resetPassword`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            lastname: lastname,
+            email: email
+        })
+    });
+
+    if (response.ok) {
+        const data = await response.json();
+        alert(data.success);
+        closeModal('passwordResetModal');
+    } else {
+        alert('Erreur lors de la restauration du mot de passe');
+    }
+}
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yanda - Dashboard Admin</title>
+
+    <!-- Inclure Pusher JS depuis le CDN -->
+    <script src="https://js.pusher.com/7.0/pusher.min.js"></script>
+
+    <!-- Inclure Laravel Echo depuis le CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/laravel-echo/1.11.0/echo.iife.js"></script>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Lien vers Font Awesome pour les icônes -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="../css/styles2.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .notification-icon {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .notification-count {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background-color: red;
+            color: white;
+            border-radius: 50%;
+            padding: 3px 7px;
+            font-size: 12px;
+        }
+
+        .notifications-container {
+            display: none;
+            position: absolute;
+            top: 50px;
+            right: 0;
+            width: 300px;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 5px;
+        }
+
+        .notification-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .notification-item:last-child {
+            border-bottom: none;
+        }
+
+        .notification-item small {
+            display: block;
+            color: #888;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+<div id="app" data-user-id="{{ auth()->user()->id }}">
+</div>
+    <div class="container mt-5">
+        <h1 class="text-center">Bienvenue sur Yanda - Dashboard Admin</h1>
+
+        <!-- Barre d'outils -->
+        <div class="d-flex justify-content-between mb-3">
+            <!-- Icône de notification -->
+            <div class="notification-wrapper" style="position: relative;">
+                <a class="notification-icon" id="notificationIcon">
+                    <i class="fas fa-bell fa-2x"></i> <!-- Icône de cloche -->
+                    <span id="notificationCount" class="notification-count" style="display: none;">0</span>
+                </a>
+
+                <!-- Div contenant les notifications -->
+                <div id="notificationsContainer" class="notifications-container" style="position: absolute;left: 20%;">
+                    <!-- Les notifications s'afficheront ici -->
+                </div>
+            </div>
+
+            <!-- Bouton de déconnexion -->
+            <button class="btn btn-danger" onclick="logout()" id="logoutBtn">Déconnexion</button>
+        </div>
+
+        <!-- Contenu restant -->
+        <ul class="nav nav-tabs" id="yandaTabs" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" onclick="chargerReservations()" id="reservations-tab" data-toggle="tab" href="#reservations" role="tab" aria-controls="reservations" aria-selected="true">Réservations</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="concerts-tab" onclick="chargerConcerts()" data-toggle="tab" href="#concerts" role="tab" aria-controls="concerts" aria-selected="false">Concerts</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="meetings-tab" onclick="chargerMeetings()" data-toggle="tab" href="#meetings" role="tab" aria-controls="meetings" aria-selected="false">Meetings</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="fetes-tab" onclick="chargerFetes()" data-toggle="tab" href="#fetes" role="tab" aria-controls="fetes" aria-selected="false">Fêtes</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="add-event-tab" data-toggle="tab" href="#add-event" role="tab" aria-controls="add-event" aria-selected="false">Ajouter Événement</a>
+            </li>
+        </ul>
+
+        <!-- Contenu des Onglets -->
+        <div class="tab-content" id="yandaTabContent">
+            <!-- Onglet Réservations -->
+            <div id="reservations" class="tab-pane fade show active" role="tabpanel" aria-labelledby="reservations-tab">
+                <h3 class="mt-3">Réservations des Utilisateurs</h3>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>ID Réservation</th>
+                            <th>Utilisateur</th>
+                            <th>Email</th>
+                            <th>Événement</th>
+                            <th>Description</th>
+                            <th> Places</th>
+                            <th>Date</th>
+                            <th>Lieu</th>
+                            <th>Lieu en Image</th>
+                            
+                        </tr>
+                    </thead>
+                    <tbody id="reservationsTable">
+                        <!-- Les données seront insérées ici dynamiquement -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Onglet Concerts --> 
+            <div class="tab-pane fade" id="concerts" role="tabpanel" aria-labelledby="concerts-tab">
+                <h3 class="mt-3">Concerts </h3>
+                <div id="noConcerts" class="alert alert-info" style="display: none;">Aucune donnée</div>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Titre</th>
+                            <th>Description</th>
+                            <th>Places</th>
+                            <th>Places Disponibles</th>
+                            <th>Date</th>
+                            <th>Lieu</th>
+                            <th>Lieu en Image</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="concertsTable">
+                        <!-- Les données seront insérées ici dynamiquement -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Onglet Meetings -->
+            <div class="tab-pane fade" id="meetings" role="tabpanel" aria-labelledby="meetings-tab">
+                <h3 class="mt-3">Meetings</h3>
+                <div id="noMeetings" class="alert alert-info" style="display: none;">Aucune donnée</div>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Titre</th>
+                            <th>Description</th>
+                            <th>Places</th>
+                            <th>Places Disponibles</th>
+                            <th>Date</th>
+                            <th>Lieu</th>
+                            <th>Lieu en Image</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="meetingsTable">
+                        <!-- Les données seront insérées ici dynamiquement -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Onglet Fêtes -->
+            <div class="tab-pane fade" id="fetes" role="tabpanel" aria-labelledby="fetes-tab">
+                <h3 class="mt-3">Fêtes</h3>
+                <div id="noFetes" class="alert alert-info" style="display: none;">Aucune donnée</div>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Titre</th>
+                            <th>Description</th>
+                            <th>Places</th>
+                            <th>Places Disponibles</th>
+                            <th>Date</th>
+                            <th>Lieu</th>
+                            <th>Lieu en Image</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fetesTable">
+                        <!-- Les données seront insérées ici dynamiquement -->
+                    </tbody>
+                </table>
+            </div>
+
+
+            <!-- Onglet Ajouter Événement -->
+            <div class="tab-pane fade" id="add-event" role="tabpanel" aria-labelledby="add-event-tab">
+                <h3 class="mt-3">Ajouter un Événement</h3>
+                <button class="btn btn-primary" data-toggle="modal" data-target="#addEventModal">Ajouter un Nouvel Événement</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pop-up de Confirmation d'Annulation -->
+    <div class="modal fade" id="cancelReservationModal" tabindex="-1" role="dialog" aria-labelledby="cancelReservationModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <!-- Contenu du pop-up -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Pop-up d'Ajout d'Événement -->
+<div class="modal fade" id="addEventModal" tabindex="-1" role="dialog" aria-labelledby="addEventModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addEventModalLabel">Ajouter un Nouvel Événement</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addEventForm">
+                    <div class="form-group">
+                        <label for="eventTitle">Titre de l'Événement</label>
+                        <select class="form-control" id="eventTitle" required>
+                            <option value="">Sélectionner un type d'événement</option>
+                            <option value="Concert">Concert</option>
+                            <option value="Meeting">Meeting</option>
+                            <option value="Fête">Fête</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventDescription">Description</label>
+                        <input type="text" class="form-control" id="eventDescription" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventSeats">Nombre de Places</label>
+                        <input type="number" class="form-control" id="eventSeats" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventDate">Date</label>
+                        <input type="date" class="form-control" id="eventDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventMax_attendees">Nombre Maximal</label>
+                        <input type="number" class="form-control" id="eventMax_attendees" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventLieu">Lieu</label>
+                        <input type="text" class="form-control" id="eventLieu" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventImage">Image</label>
+                        <input type="file" class="form-control-file" id="eventImage" required>
+                    </div>
+                    <button type="submit" onclick="FormEnvent()" class="btn btn-primary">Ajouter l'Événement</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Pop-up de Modification d'Événement -->
+    <div class="modal fade" id="editEventModal" tabindex="-2" role="dialog" aria-labelledby="editEventModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editEventModalLabel">Modifier l'Événement</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="editEventForm">
+                        <input type="hidden" id="editEventId">
+                        <div class="form-group">
+                            <label for="editEventTitle">Titre de l'Événement</label>
+                            <input type="text" class="form-control" id="editEventTitle" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editEventDescription">Description</label>
+                            <input type="text" class="form-control" id="editEventDescription" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editEventDate">Date</label>
+                            <input type="date" class="form-control" id="editEventDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editEventSeats">Nombre de Places</label>
+                            <input type="number" class="form-control" id="editEventSeats" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editEventAvailableSeats">Places Disponibles</label>
+                            <input type="number" class="form-control" id="editEventAvailableSeats" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editEventLocation">Lieu</label>
+                            <input type="text" class="form-control" id="editEventLocation" required>
+                        </div>
+    
+                        <!-- Image actuelle -->
+                        <div class="form-group">
+                            <label>Image actuelle</label><br>
+                            <img id="currentEventImage" src="" alt="Image actuelle" style="max-width: 200px;">
+                        </div>
+    
+                        <!-- Champ file pour remplacer l'image -->
+                        <div class="form-group">
+                            <label for="editEventImage">Remplacer l'image</label>
+                            <input type="file" class="form-control-file" id="editEventImage" accept="image/*">
+                        </div>
+    
+                        <button type="submit" onclick="modifier()" class="btn btn-warning">Modifier</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+<!-- Validation JavaScript -->
+
+
+<script>
+  
+  const apiUrl = 'http://127.0.0.1:8000/api';
+  const url = 'http://127.0.0.1:8000/Storage/';
+    /*  function verifierToken() {
+                let token = localStorage.getItem("token");
+
+                if (token) {
+                    $.ajax({
+                        url: `${apiUrl}/verify-token`,
+                        method: "GET",
+                        headers: {
+                            "Authorization": "Bearer " + token
+                        },
+                        success: function (response) {
+                            if (response.valide) {
+                                console.log("Token valide");
+                                chargerReservations();
+                                chargerConcerts();
+                                chargerMeetings();
+                                chargerFetes();
+                            } else {
+                                console.log("Token invalide");
+                                window.location.href = "../home.html";
+                            }
+                        },
+                        error: function () {
+                            console.log("Erreur de vérification du token");
+                            window.location.href = "../home.html";
+                        }
+                    });
+                } else {
+                    window.location.href = "../home.html";
+                }
+            }*/
+
+            async function FormEnvent() {
+     let token = localStorage.getItem("token");
+
+    // Récupérer les champs du formulaire
+    const title = document.getElementById('eventTitle').value;
+    const description = document.getElementById('eventDescription').value;
+    const seats = document.getElementById('eventSeats').value.replace(/[^0-9]/g, '');
+    const date = document.getElementById('eventDate').value;
+    const Max_attendees = document.getElementById('eventMax_attendees').value.replace(/[^0-9]/g, '');
+    const lieu = document.getElementById('eventLieu').value;
+    const imageInput = document.getElementById('eventImage');
+
+    // Construction du message d'erreur
+    let errorMessage = "";
+
+    if (title === "") {
+        errorMessage += "- Veuillez sélectionner un type d'événement.\n";
+    }
+    if (description.trim() === "") {
+        errorMessage += "- Veuillez entrer une description.\n";
+    }
+    if (seats <= 10) {
+        errorMessage += "- Veuillez entrer un nombre de places supérieur à 10.\n";
+    }
+    if (Max_attendees < seats) {
+        errorMessage += "- Veuillez entrer un nombre de places Max supérieur au nombre de places disponibles.\n";
+    }
+    if (date === "") {
+        errorMessage += "- Veuillez sélectionner une date.\n";
+    }
+    if (lieu.trim() === "") {
+        errorMessage += "- Veuillez renseigner un lieu.\n";
+    }
+    if (imageInput.files.length === 0) {
+        errorMessage += "- Veuillez ajouter une image.\n";
+    }
+
+    // Afficher l'alerte si des champs sont manquants
+    if (errorMessage !== "") {
+        alert("Veuillez corriger les erreurs suivantes :\n" + errorMessage);
+        return;
+    }
+
+    // Utiliser FormData pour préparer les données à envoyer
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('description', description);
+    formData.append('event_date', date);
+    formData.append('max_attendees', Max_attendees);
+    formData.append('available_seats', seats);
+    formData.append('lieu', lieu);
+    formData.append('image', imageInput.files[0]);
+
+    try {
+         response = await fetch(`${apiUrl}/register/event`, {
+            method: 'POST',
+            headers: {
+               "Authorization": "Bearer " + token // Pas de "Content-Type" car FormData s'en occupe automatiquement
+            },
+            body: formData
+        });
+
+       /* if (response.ok) {
+            const data = await response.json();
+            alert(data.success);
+        } else {
+            const errorData = await response.json();
+            alert(`Oups!!!! Erreur lors de l'enregistrement: ${errorData.message}`);
+        }*/
+        const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+        const data = await response.json();
+        alert(data.success);
+       // chargerReservations();
+        chargerConcerts();
+        chargerMeetings();
+        chargerFetes();
+    } else {
+        const text = await response.text(); // Affiche le contenu brut pour diagnostic
+        console.error("Réponse inattendue du serveur :", text);
+        alert("Erreur inattendue : La réponse n'est pas en format JSON.");
+    }
+    } catch (error) {
+        alert("Erreur réseau : " + error.message);
+    }
+}
+
+   // Appel de la fonction au chargement de la page
+   window.onload = function() {
+            
+            // Charger les Reservations au chargement de la page
+            chargerReservations();
+      };
+
+
+async function chargerConcerts() {
+    const title = "concert";
+    const encodedTitle = encodeURIComponent(title);
+
+    try {
+        const response = await fetch(`${apiUrl}/search/${encodedTitle}`);
+
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP : ${response.status}`);
+        }
+
+        const data = await response.json();
+        const concertsTable = document.getElementById('concertsTable');
+        const noConcertsDiv = document.getElementById('noConcerts');
+
+        // Vider le tableau avant d'ajouter les nouvelles lignes
+        concertsTable.innerHTML = "";
+
+        // Vérifier s'il y a des concerts à afficher
+        if (!data.events || data.events === "0" || (Array.isArray(data.events) && data.events.length === 0)) {
+            noConcertsDiv.style.display = 'block'; // Afficher le message "Aucune donnée"
+        } else {
+            noConcertsDiv.style.display = 'none'; // Masquer le message
+
+            // Si `events` est une collection (tableau)
+            if (Array.isArray(data.events)) {
+                data.events.forEach(event => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${event.id}</td>
+                        <td>${event.title}</td>
+                        <td>${event.description}</td>
+                        <td>${event.max_attendees}</td>
+                        <td>${event.available_seats}</td>
+                        <td>${new Date(event.event_date).toLocaleDateString()}</td>
+                        <td>${event.lieu}</td>
+                        <td><img src="${event.image}" alt="Image de l'événement" style="width: 100px; height: auto;"></td>
+                         <td><button class="btn btn-danger" onclick="deleteEvent(${event.id})">Supprimer</button><span>    </span><button class="btn btn-primary" onclick="openEditModal(${event.id}, '${event.title}', '${event.description}', '${new Date(event.event_date)}', ${event.max_attendees}, ${event.available_seats}, '${event.lieu}', '${event.image}')">Modifier</button></td>
+                   `;
+                    concertsTable.appendChild(row);
+                });
+            } else {
+                // Si `events` est un seul objet
+                const event = data.events;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${event.id}</td>
+                    <td>${event.title}</td>
+                    <td>${event.description}</td>
+                    <td>${event.max_attendees}</td>
+                    <td>${event.available_seats}</td>
+                    <td>${new Date(event.event_date).toLocaleDateString()}</td>
+                    <td>${event.lieu}</td>
+                    <td><img src="${event.image}" alt="Image de l'événement" style="width: 100px; height: auto;"></td>
+                     <td><button class="btn btn-danger" onclick="deleteEvent(${event.id})">Supprimer</button><span>    </span><button class="btn btn-primary" onclick="openEditModal(${event.id}, '${event.title}', '${event.description}', '${new Date(event.event_date)}', ${event.max_attendees}, ${event.available_seats}, '${event.lieu}', '${event.image}')">Modifier</button></td>
+                   `;
+                concertsTable.appendChild(row);
+            }
+        }
+    } catch (error) {
+        console.error("Erreur lors du chargement des concerts :", error);
+    }
+}
+
+async function chargerMeetings() {
+    const title = "meeting";
+    const encodedTitle = encodeURIComponent(title);
+
+    try {
+        const response = await fetch(`${apiUrl}/search/${encodedTitle}`);
+
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP : ${response.status}`);
+        }
+
+        const data = await response.json();
+        const meetingsTable = document.getElementById('meetingsTable');
+        const noMeetingsDiv = document.getElementById('noMeetings');
+
+        // Vider le tableau avant d'ajouter les nouvelles lignes
+        meetingsTable.innerHTML = "";
+
+        // Vérifier s'il y a des meetings à afficher
+        if (!data.events || data.events === "0" || (Array.isArray(data.events) && data.events.length === 0)) {
+            noMeetingsDiv.style.display = 'block'; // Afficher le message "Aucune donnée"
+        } else {
+            noMeetingsDiv.style.display = 'none'; // Masquer le message
+
+            // Si `events` est une collection (tableau)
+            if (Array.isArray(data.events)) {
+                data.events.forEach(event => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${event.id}</td>
+                        <td>${event.title}</td>
+                        <td>${event.description}</td>
+                        <td>${event.max_attendees}</td>
+                        <td>${event.available_seats}</td>
+                        <td>${new Date(event.event_date).toLocaleDateString()}</td>
+                        <td>${event.lieu}</td>
+                        <td><img src="${event.image}" alt="Image de l'événement" style="width: 100px; height: auto;"></td>
+                       <td><button class="btn btn-danger" onclick="deleteEvent(${event.id})">Supprimer</button><span>    </span><button class="btn btn-primary" onclick="openEditModal(${event.id}, '${event.title}', '${event.description}', '${new Date(event.event_date)}', ${event.max_attendees}, ${event.available_seats}, '${event.lieu}', '${event.image}')">Modifier</button></td>
+                   `;
+                    meetingsTable.appendChild(row);
+                });
+            } else {
+                // Si `events` est un seul objet
+                const event = data.events;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${event.id}</td>
+                    <td>${event.title}</td>
+                    <td>${event.description}</td>
+                    <td>${event.max_attendees}</td>
+                    <td>${event.available_seats}</td>
+                    <td>${new Date(event.event_date).toLocaleDateString()}</td>
+                    <td>${event.lieu}</td>
+                    <td><img src="${event.image}" alt="Image de l'événement" style="width: 100px; height: auto;"></td>
+                    <td><button class="btn btn-danger" onclick="deleteEvent(${event.id})">Supprimer</button><span>    </span><button class="btn btn-primary" onclick="openEditModal(${event.id}, '${event.title}', '${event.description}', '${new Date(event.event_date)}', ${event.max_attendees}, ${event.available_seats}, '${event.lieu}', '${event.image}')">Modifier</button></td>
+                   `;
+                meetingsTable.appendChild(row);
+            }
+        }
+    } catch (error) {
+        console.error("Erreur lors du chargement des meetings :", error);
+    }
+}
+
+
+async function chargerFetes() {
+    const title = "Fête";
+    const encodedTitle = encodeURIComponent(title);
+
+    try {
+        const response = await fetch(`${apiUrl}/search/${encodedTitle}`);
+
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP : ${response.status}`);
+        }
+
+        const data = await response.json();
+        const fetesTable = document.getElementById('fetesTable');
+        const noFetesDiv = document.getElementById('noFetes');
+
+        // Vider le tableau avant d'ajouter les nouvelles lignes
+        fetesTable.innerHTML = "";
+
+        // Vérifier s'il y a des fêtes à afficher
+        if (!data.events || data.events === "0" || (Array.isArray(data.events) && data.events.length === 0)) {
+            noFetesDiv.style.display = 'block'; // Afficher le message "Aucune donnée"
+        } else {
+            noFetesDiv.style.display = 'none'; // Masquer le message
+
+            // Si `events` est une collection (tableau)
+            if (Array.isArray(data.events)) {
+                data.events.forEach(event => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${event.id}</td>
+                        <td>${event.title}</td>
+                        <td>${event.description}</td>
+                        <td>${event.max_attendees}</td>
+                        <td>${event.available_seats}</td>
+                        <td>${new Date(event.event_date).toLocaleDateString()}</td>
+                        <td>${event.lieu}</td>
+                        <td><img src="${event.image}" alt="Image de l'événement" style="width: 100px; height: auto;"></td>
+                        <td><button class="btn btn-danger" onclick="deleteEvent(${event.id})">Supprimer</button><span>    </span><button class="btn btn-primary" onclick="openEditModal(${event.id}, '${event.title}', '${event.description}', '${new Date(event.event_date)}', ${event.max_attendees}, ${event.available_seats}, '${event.lieu}', '${event.image}')">Modifier</button></td>
+                   `;
+                    fetesTable.appendChild(row);
+                });
+            } else {
+                // Si `events` est un seul objet
+                const event = data.events;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${event.id}</td>
+                    <td>${event.title}</td>
+                    <td>${event.description}</td>
+                    <td>${event.max_attendees}</td>
+                    <td>${event.available_seats}</td>
+                    <td>${new Date(event.event_date).toLocaleDateString()}</td>
+                    <td>${event.lieu}</td>
+                    <td><img src="${event.image}" alt="Image de l'événement" style="width: 100px; height: auto;"></td>
+                     <td><button class="btn btn-danger" onclick="deleteEvent(${event.id})">Supprimer</button><span>    </span><button class="btn btn-primary" onclick="openEditModal(${event.id}, '${event.title}', '${event.description}', '${new Date(event.event_date)}', ${event.max_attendees}, ${event.available_seats}, '${event.lieu}', '${event.image}')">Modifier</button></td>
+                   `;
+                fetesTable.appendChild(row);
+            }
+        }
+    } catch (error) {
+        console.error("Erreur lors du chargement des fêtes :", error);
+    }
+}
+
+
+      
+//openCancelModal(${reservation.id}, '${reservation.event.title}', '${reservation.event.description}')
+
+async function deleteEvent(Idevent) {
+
+    const token = localStorage.getItem('token');
+    
+
+try {
+     response = await fetch(`${apiUrl}/delete_event/${Idevent}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    result = await response.json();
+    
+    if(result.status === 200){
+        
+        alert('Événement supprimé avec succès');
+        chargerReservations(); // Recharger les réservations après annulation
+    }else{
+        alert('Événement non trouvé');
+        chargerReservations(); // Recharger les réservations après annulation 
+    }
+
+    if (!response.ok) {
+        throw new Error(`Erreur HTTP : ${response.status}`);
+    }
+
+} catch (error) {
+    console.error('Erreur lors de l\'annulation de la réservation :', error);
+}
+    
+}
+
+// Fonction pour ouvrir le modal de modification et pré-remplir les champs
+async function openEditModal(id, title, description, event_date, maxSeats, availableSeats, lieu, image) { 
+
+    
+    // Remplir le formulaire de modification
+    document.getElementById('editEventId').value = id;
+    document.getElementById('editEventTitle').value = title;
+    document.getElementById('editEventDescription').value = description;
+    document.getElementById('editEventDate').value = new Date(event_date).toISOString().substring(0, 10);
+    document.getElementById('editEventSeats').value = maxSeats;
+    document.getElementById('editEventAvailableSeats').value = availableSeats;
+    document.getElementById('editEventLocation').value = lieu;
+    document.getElementById('currentEventImage').src = image;
+
+     
+
+    // Ouvrir le modal de modification
+    $('#editEventModal').modal('show');
+}
+
+  /////////function modifier événement
+   modifier = async () => {
+    const token = localStorage.getItem('token');
+    const id_event = document.getElementById('editEventId').value;
+    const title_event = document.getElementById('editEventTitle').value;
+    const description_event = document.getElementById('editEventDescription').value;
+    const date_event = document.getElementById('editEventDate').value;
+    const maxSeats_event = document.getElementById('editEventSeats').value;
+    const availableSeats_event = document.getElementById('editEventAvailableSeats').value;
+    const lieu_event = document.getElementById('editEventLocation').value;
+    const nouvelleImage_event = document.getElementById('editEventImage').files[0];
+    const currentImage = document.getElementById('currentEventImage').src;
+
+    const formData = new FormData();
+    formData.append('title', title_event);
+    formData.append('description', description_event);
+    formData.append('event_date', date_event);
+    formData.append('max_attendees', maxSeats_event);
+    formData.append('available_seats', availableSeats_event);
+    formData.append('lieu', lieu_event);
+    
+    if (nouvelleImage_event) {
+        formData.append('image', nouvelleImage_event);
+    } else {
+        formData.append('image', currentImage);
+    }
+
+   
+    
+    try {
+        const response = await fetch(`${apiUrl}/event_update/${id_event}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text(); // Récupérer le message d'erreur du serveur
+            throw new Error(`Échec de la mise à jour: ${errorText}`);
+        }
+
+        const result = await response.json();
+        alert('Événement mis à jour avec succès: ' + JSON.stringify(result));
+    } catch (error) {
+        console.error('Erreur lors de la mise à jour:', error);
+        alert('Erreur survenue lors de la mise à jour: ' + error.message);
+    }
+};
+
+
+       
+  
+</script>
+ <!-- Script pour gérer les notifications -->
+ <script type="text/javascript">
+    
+    // Configuration de Laravel Echo avec Pusher
+    const echo = new Echo({
+        broadcaster: 'pusher',
+        key: '{{ env("PUSHER_APP_KEY") }}',
+        cluster: '{{ env("PUSHER_APP_CLUSTER") }}',
+        forceTLS: true
+    });
+
+    // Initialiser un tableau vide pour stocker les notifications
+    var notifications = [];
+
+    // Fonction pour afficher les notifications
+    function afficherNotifications() {
+        const notificationsContainer = $('#notificationsContainer');
+        notificationsContainer.empty(); // Vider le container des notifications
+
+        if (notifications.length === 0) {
+            notificationsContainer.append('<div class="text-center notification-item">Aucune notification</div>');
+        } else {
+            // Trier les notifications du plus récent au moins récent
+            notifications.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+            notifications.forEach(notification => {
+                notificationsContainer.append(`
+                    <div class="text-center notification-item">
+                        ${notification.message}
+                        <small>${notification.time}</small>
+                    </div>
+                `);
+            });
+        }
+    }
+
+    // Fonction pour mettre à jour le compteur de notifications
+    function mettreAJourCompteur() {
+        const count = notifications.length;
+        if (count > 0) {
+            $('#notificationCount').text(count).show();
+        } else {
+            $('#notificationCount').hide();
+        }
+    }
+
+    // Quand on clique sur l'icône de notification
+    $('#notificationIcon').on('click', function () {
+        const notificationsContainer = $('#notificationsContainer');
+        afficherNotifications(); // Afficher les notifications
+        notificationsContainer.toggle(); // Toggle visibility de la div des notifications
+    });
+    const userId = document.getElementById('app').getAttribute('data-user-id');
+    // Écouter les notifications en temps réel pour l'utilisateur connecté
+    echo.private('App.User.' + userId)
+        .listen('NewEventNotification', (notification) => {
+            console.log(notification); // Vérification dans la console
+
+            // Ajouter la nouvelle notification au tableau
+            notifications.push({
+                message: notification.message,
+                time: notification.time
+            });
+
+            // Mettre à jour le compteur et réafficher les notifications
+            mettreAJourCompteur();
+            afficherNotifications();
+        });
+
+    // Initialisation du compteur
+    mettreAJourCompteur();
+
+
+
+    // Déconnexion
+    async function logout()  {
+        // Supprimer le token de localStorage
+    localStorage.removeItem('token');
+
+// Optionnel: Envoyer une requête à l'API Laravel pour informer de la déconnexion
+fetch(`${apiUrl}/logout`, {
+    method: 'POST',
+    headers: {
+        'Authorization': 'Bearer ' + localStorage.getItem('token'),
+        'Content-Type': 'application/json',
+    },
+})
+.then(response => {
+    if (response.ok) {
+        // Rediriger vers la page de connexion ou une autre page après la déconnexion
+        window.location.href = '../home.html';
+    } else {
+        alert("Erreur lors de la déconnexion");
+    }
+})
+.catch(error => {
+    console.log("Erreur réseau:", error);
+});
+
+
+    };
+
+    async function chargerReservations(){
+        try {
+        const response = await fetch(`${apiUrl}/reservations`);
+
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP : ${response.status}`);
+        }
+
+        const data = await response.json();
+       
+        const reservationsTable = document.getElementById('reservationsTable');
+        data.forEach(booking =>  {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${booking.id}</td>
+                        <td>${booking.user.name} ${booking.user.lastname}</td>
+                        <td>${booking.user.email}</td>
+                        <td>${booking.event.title}</td>
+                        <td>${booking.event.description}</td>
+                        <td>${booking.number_of_seats}</td>
+                        <td>${new Date(booking.event.event_date).toLocaleDateString()}</td>
+                        <td>${booking.event.lieu}</td>
+                        <td><img src="${booking.event.image}" alt="Image de l'événement" style="width: 100px; height: auto;"></td>
+                         `;
+                   reservationsTable.appendChild(row);
+                });
+    }catch (error) {
+        console.error("Erreur lors du chargement des réservations :", error);
+    }
+}
+</script>
+
+    <!-- Scripts JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="../js/scriptadj.js"></script>
+    <script>
+
+    </script>
+</body>
+
+</html>

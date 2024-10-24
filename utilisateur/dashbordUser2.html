@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Réservations</title>
+
+    <!-- Inclure Pusher JS depuis le CDN -->
+    <script src="https://js.pusher.com/7.0/pusher.min.js"></script>
+
+    <!-- Inclure Laravel Echo depuis le CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/laravel-echo/1.11.0/echo.iife.js"></script>
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Lien vers le CSS Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <style>
+        .nav-tabs {
+            margin-bottom: 20px;
+        }
+
+        .nav-item a.active {
+            background-color: blue !important;
+            color: white !important;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <h1>Gestion des Événements et Réservations</h1>
+
+<!-- Barre d'outils -->
+<div class="d-flex justify-content-between mb-3">
+    <!-- Icône de notification -->
+    <div class="notification-wrapper" style="position: relative;">
+        <a class="notification-icon" id="notificationIcon" style="cursor: pointer;">
+            <i class="fas fa-bell fa-2x"></i> <!-- Icône de cloche -->
+            <span id="notificationCount" class="notification-count badge badge-danger" style="display:none;">0</span>
+        </a>
+
+        <!-- Div contenant les notifications -->
+        <div id="notificationsContainer" class="notifications-container" style="display: none; position: absolute; top: 40px; right: 0; width: 300px; max-height: 300px; overflow-y: auto; background-color: white; border: 1px solid #ccc; box-shadow: 0px 4px 8px rgba(0,0,0,0.1);">
+            <!-- Bouton fermer dans le coin supérieur droit -->
+            <div class="d-flex justify-content-between p-2 border-bottom">
+                <span><strong>Notifications</strong></span>
+                <button id="closeNotifications" class="btn btn-sm btn-danger">Fermer</button>
+            </div>
+
+            <!-- Les notifications seront ajoutées ici dynamiquement -->
+            <div id="notificationsList">
+                <!-- Exemple de notification -->
+                <!-- <div class="notification-item p-2 border-bottom">Nouvelle notification</div> -->
+            </div>
+        </div>
+    </div>
+</div>
+
+            <!-- Bouton de déconnexion -->
+            <button  style="position: absolute;left: 90%;" onclick="logout()" class="btn btn-danger" id="logoutBtn">Déconnexion</button>
+        </div>
+        <!-- Navigation sous forme d'onglets -->
+        <ul class="nav nav-tabs">
+            
+            <li class="nav-item">
+                <a class="nav-link active" onclick="loadEventsC()" href="#" data-target="concertsTable">Concerts</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" onclick="loadEventsM()" href="#" data-target="meetingsTable">Meetings</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" onclick="loadEventsF()" href="#" data-target="fetesTable">Fêtes</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link " onclick="fetchReservationsByUserId()" href="#" data-target="reservationTable">Réservations</a>
+            </li>
+        </ul>
+
+        <!-- Liste des Concerts -->
+        <div class="tab-content active" id="concertsTable">
+            <h2>Concerts</h2>
+            <div id="noConcerts" style="display:none;">Aucun concert disponible</div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Titre</th>
+                        <th>Date</th>
+                        <th>Places Disponibles</th>
+                        <th>Lieu</th>
+                        <th>Image</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="concertsTableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- Liste des Meetings -->
+        <div class="tab-content" id="meetingsTable">
+            <h2> Meetings</h2>
+            <div id="noMeetings" style="display:none;">Aucun meeting disponible</div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Titre</th>
+                        <th>Date</th>
+                        <th>Places Disponibles</th>
+                        <th>Lieu</th>
+                        <th>Image</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="meetingsTableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- Liste des Fêtes -->
+        <div class="tab-content" id="fetesTable">
+            <h2> Fêtes</h2>
+            <div id="noFetes" style="display:none;">Aucune fête disponible</div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Titre</th>
+                        <th>Date</th>
+                        <th>Places Disponibles</th>
+                        <th>Lieu</th>
+                        <th>Image</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="fetesTableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- Liste des Réservations -->
+        <div class="tab-content" id="reservationTable">
+            <h2>Réservations de l'utilisateur</h2>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Utilisateur</th>
+                        <th>Événement</th>
+                        <th>Description</th>
+                        <th>Places Réservées</th>
+                        <th>Date de Création</th>
+                        <th>Date de l'Événement</th>
+                        <th>Lieu</th>
+                        <th>Image</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="reservationsTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal pour l'annulation -->
+    <div id="cancelReservationModal" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Annuler la réservation</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Êtes-vous sûr de vouloir annuler la réservation de l'événement :</p>
+                    <p> l'événement de type : <span id="reservationEvent"></span></p>
+                    <p >l'événement avec la description: <span id="reservationDescription"></span></p>
+                    <input type="hidden" id="reservationId">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Retour</button>
+                    <button type="button" class="btn btn-danger" id="confirmCancelReservation">Confirmer l'annulation</button>
+                </div>
+            </div>
+        </div>
+    </div>
+   
+<!-- Fenêtre modale -->
+<div class="modal fade" id="reservationModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Réserver un événement</h5>
+                <button onclick="FermeReserv()" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Formulaire de réservation -->
+                <form id="reservationForm" action="#" method="POST">
+                    <input type="hidden" id="event_id" name="event_id">
+                    <input type="hidden" id="user_id" name="user_id">
+                    
+                    <div class="mb-3">
+                        <label for="places" class="form-label">Nombre de places à réserver :</label>
+                        <input type="number" class="form-control" id="places" name="places" min="1" required>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <!-- Bouton Retour -->
+                        <button  type="button" class="btn btn-secondary" data-bs-dismiss="modal">Retour</button>
+                        <!-- Bouton Réserver -->
+                        <button type="submit" class="btn btn-primary">Réserver</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+    
+     <!-- Lien vers le JS Bootstrap et jQuery -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const apiUrl = 'http://127.0.0.1:8000/api'; 
+        const url = 'http://127.0.0.1:8000/Storage/';
+        // Fonction pour gérer le changement d'onglet
+        $(document).ready(function() {
+            $('.nav-link').on('click', function(e) {
+                e.preventDefault();
+
+                // Retirer la classe active des autres liens
+                $('.nav-link').removeClass('active');
+
+                // Ajouter la classe active à l'onglet cliqué
+                $(this).addClass('active');
+
+                // Masquer tous les contenus
+                $('.tab-content').removeClass('active');
+
+                // Afficher le contenu associé à l'onglet cliqué
+                const target = $(this).data('target');
+                $('#' + target).addClass('active');
+                 // Charger les concerts au chargement de la page
+                 loadEventsC()
+            });
+
+           
+        });
+
+        // Charger les événements en fonction du type sélectionné
+        async function loadEventsC() {
+            const title = 'concert';
+            const token = localStorage.getItem('token');
+
+            try {
+                 response = await fetch(`${apiUrl}/search/${title}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP : ${response.status}`);
+                }
+
+                 data = await response.json();
+                const tableBody = document.querySelector('#concertsTableBody');
+                tableBody.innerHTML = "";  // Vider le tableau
+
+                if (!data.events || data.events.length === 0) {
+                    document.querySelector('#noConcerts').style.display = 'block';
+                    return;
+                } else {
+                    document.querySelector('#noConcerts').style.display = 'none';  // Masquer le message
+                }
+
+                data.events.forEach(event => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${event.id}</td>
+                        <td>${event.title}</td>
+                        <td>${event.event_date}</td>
+                        <td>${event.available_seats}</td>
+                        <td>${event.lieu}</td>
+                        <td><img src="${event.image}" alt="${event.title}" width="100" /></td>
+                        <td><button id="CReserve" class="btn btn-primary" onclick="preloadEventId(${event.id})">Réserver</button></td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Erreur de chargement des événements :', error);
+            }
+        }
+        async function loadEventsM() {
+            const title = 'meeting';
+            const token = localStorage.getItem('token');
+
+            try {
+                const response = await fetch(`${apiUrl}/search/${title}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP : ${response.status}`);
+                }
+
+                const data = await response.json();
+                const tableBody = document.querySelector('#meetingsTableBody');
+                tableBody.innerHTML = "";  // Vider le tableau
+
+                if (!data.events || data.events.length === 0) {
+                    document.querySelector('#noMeetings').style.display = 'block';
+                    return;
+                } else {
+                    document.querySelector('#noMeetings').style.display = 'none';  // Masquer le message
+                }
+
+                data.events.forEach(event => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${event.id}</td>
+                        <td>${event.title}</td>
+                        <td>${event.event_date}</td>
+                        <td>${event.available_seats}</td>
+                        <td>${event.lieu}</td>
+                        <td><img src="${event.image}" alt="${event.title}" width="100" /></td>
+                        <td><button id="CReserve" class="btn btn-primary" onclick="preloadEventId(${event.id})">Réserver</button></td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Erreur de chargement des événements :', error);
+            }
+        }
+        async function loadEventsF() {
+            const title = 'fête';
+            const token = localStorage.getItem('token');
+
+            try {
+                const response = await fetch(`${apiUrl}/search/${title}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP : ${response.status}`);
+                }
+
+                const data = await response.json();
+                const tableBody = document.querySelector('#fetesTableBody');
+                tableBody.innerHTML = "";  // Vider le tableau
+                    
+                if (!data.events || data.events.length === 0) {
+                    document.querySelector('#noFetes').style.display = 'block';
+                    return;
+                } else {
+                    document.querySelector('#noFetes').style.display = 'none';  // Masquer le message
+                }
+
+                data.events.forEach(event => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${event.id}</td>
+                        <td>${event.title}</td>
+                        <td>${event.event_date}</td>
+                        <td>${event.available_seats}</td>
+                        <td>${event.lieu}</td>
+                        <td><img src="${event.image}" alt="${event.title}" width="100" /></td>
+                        <td><button id="CReserve" class="btn btn-primary" onclick="preloadEventId(${event.id})">Réserver</button></td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Erreur de chargement des événements :', error);
+            }
+        }
+        // Fonction pour récupérer les réservations de l'utilisateur
+        async function fetchReservationsByUserId() {
+            const userId = await getIdUser();
+            const token = localStorage.getItem('token');
+
+            try {
+                const response = await fetch(`${apiUrl}/user/reservations/${userId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP : ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                
+                const reservationsTableBody = document.querySelector('#reservationsTableBody');
+                reservationsTableBody.innerHTML = "";  // Vider le tableau
+
+                data.data.forEach(reservation => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${reservation.id}</td>
+                        <td>${reservation.user.name} ${reservation.user.lastname}</td>
+                        <td>${reservation.event.title}</td>
+                        <td>${reservation.event.description}</td>
+                        <td>${reservation.number_of_seats}</td>
+                        <td>${reservation.created_at}</td>
+                        <td>${reservation.event.event_date}</td>
+                        <td>${reservation.event.lieu}</td>
+                        <td><img src="${url}${reservation.event.image}" alt="${reservation.event.title}" width="100" /></td>
+                        <td><button class="btn btn-danger" onclick="openCancelModal(${reservation.id}, '${reservation.event.title}', '${reservation.event.description}')">Annuler</button></td>
+                    `;
+                    reservationsTableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Erreur lors de la récupération des réservations :', error);
+            }
+        }
+
+        // Fonction pour ouvrir le modal d'annulation
+        function openCancelModal(reservationId, eventTitle, eventDescription) {
+            
+            $('#reservationId').val(reservationId);
+            $('#reservationEvent').text(eventTitle);
+            $('#reservationDescription').text(eventDescription);
+            $('#cancelReservationModal').modal('show');
+           
+        }
+
+// Fonction pour fermer la modale lors du clic sur "Retour"
+document.querySelector('.btn-secondary').addEventListener('click', function() {
+    $('#cancelReservationModal').modal('hide');
+    
+});
+document.querySelector('#reservationForm .btn-secondary').addEventListener('click', function() {
+    $('#places').val('');
+    
+});
+
+// Confirmer l'annulation de la réservation
+document.querySelector('#confirmCancelReservation').addEventListener('click', async function() {
+    $('#cancelReservationModal').modal('hide'); // Fermer la modale
+    const reservationId = $('#reservationId').val();
+    const token = localStorage.getItem('token');
+
+    try {
+        const response = await fetch(`${apiUrl}/cancel-reservation/${reservationId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        const result = await response.json();
+        
+        if(result.status === 200){
+            
+            fetchReservationsByUserId(); // Recharger les réservations après annulation
+        }
+
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP : ${response.status}`);
+        }
+
+    } catch (error) {
+        console.error('Erreur lors de l\'annulation de la réservation :', error);
+    }
+});
+
+
+       // Fonction qui récupère l'ID de l'utilisateur via son token
+       async function getIdUser() {
+    const token = localStorage.getItem('token');
+    
+    if (token) {
+        try {
+            const response = await fetch(`${apiUrl}/user-id`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            });
+
+             data = await response.json();
+            return data.user_id; // Retourner l'ID utilisateur
+        } catch (error) {
+            console.error('Erreur:', error);
+            return null; // Retourner null en cas d'erreur
+        }
+    }
+    return null; // Si aucun token n'est présent
+}
+    
+        // Exemple pour précharger l'event_id dynamiquement
+       async function preloadEventId(eventId) {
+            
+            document.getElementById('event_id').value = eventId;
+            document.getElementById('user_id').value = await getIdUser();// Charger l'ID de l'utilisateur
+              
+            // Afficher le formulaire lorsque le bouton est cliqué
+            var myModal = new bootstrap.Modal(document.getElementById('reservationModal'));
+            myModal.show();
+            
+        }
+    
+        // Appel de la fonction au chargement de la page
+        window.onload = function() {
+            
+             // Charger les concerts au chargement de la page
+            loadEventsC()
+       };
+
+        
+
+         //*****************
+            //ici la fonction permetant d'enregistrer la reservation
+            document.querySelector('#reservationForm .btn-primary').addEventListener('click', async function (e) {
+    e.preventDefault(); // Empêcher l'envoi du formulaire par défaut
+
+    const token = localStorage.getItem('token');
+    const nombredeplace = $('#places').val();
+    const IdEvent = $('#event_id').val();
+    const userId = $('#user_id').val();
+
+    if (!token || !userId || !IdEvent || !nombredeplace) {
+        alert("Informations manquantes. Veuillez vérifier les champs.");
+        return;
+    }
+
+
+    try {
+        const response = await fetch(`${apiUrl}/register/reservation`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                user_id: userId,
+                event_id: IdEvent,
+                number_of_seats: nombredeplace
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            alert("Réservation réussie ! ID: " + data.reservation.id);
+           
+        } else {
+            // Affichage du message d'erreur retourné par l'API
+            const errorData = await response.json();
+            alert("Erreur d'enregistrement de la réservation : " + (errorData.message || "Erreur inconnue"));
+        }
+
+        // Réinitialiser le champ "places" après le traitement de la requête, que ce soit une réussite ou un échec
+        $('#places').val('');
+
+    } catch (error) {
+        alert(`Erreur : ${error.message}`);
+        
+    }
+   
+});
+
+
+            //*****************
+    </script>
+   <script>
+    window.Echo.private('App.Models.User.' + userId)
+    .notification((notification) => {
+        // Ajoute la notification dans la div de notifications
+        $('#notificationsContainer').prepend(`
+            <div class="notification-item">
+                ${notification.message}
+                <small>${notification.time}</small>
+            </div>
+        `);
+
+        // Met à jour le compteur de notifications
+        var count = parseInt($('#notificationCount').text()) || 0;
+        $('#notificationCount').text(count + 1).show();
+    });
+
+   </script>
+ 
+ <script src="https://js.pusher.com/7.0/pusher.min.js"></script>
+
+ <script type="text/javascript">
+     $(document).ready(function() {
+         // Afficher les notifications lorsque l'utilisateur clique sur l'icône
+         $('#notificationIcon').on('click', function() {
+             $('#notificationsContainer').show();
+         });
+ 
+         // Fermer les notifications lorsque l'utilisateur clique sur le bouton "Fermer"
+         $('#closeNotifications').on('click', function() {
+             $('#notificationsContainer').hide();
+         });
+ 
+         // Initialiser Laravel Echo et Pusher pour recevoir les notifications en temps réel
+         const echo = new Echo({
+             broadcaster: 'pusher',
+             key: '{{ env("PUSHER_APP_KEY") }}',
+             cluster: '{{ env("PUSHER_APP_CLUSTER") }}',
+             forceTLS: true
+         });
+ 
+         // Écouter les notifications en temps réel
+         echo.channel('private-App.User.' + '{{ auth()->user()->id }}')
+             .listen('NewEventNotifications', (notification) => {
+                 // Incrémenter le nombre de notifications non lues
+                 let count = parseInt($('#notificationCount').text()) || 0;
+                 $('#notificationCount').text(count + 1).show();
+ 
+                 // Ajouter la nouvelle notification dans la liste
+                 $('#notificationsList').prepend(`
+                     <div class="notification-item p-2 border-bottom">
+                         <strong>${notification.message}</strong> - ${notification.time}
+                     </div>
+                 `);
+             });
+     });
+      // Déconnexion
+      async function logout() {
+    // Récupérer le token avant de le supprimer
+    const token = localStorage.getItem('token');
+    
+    // Vérifier si le token existe
+    if (!token) {
+        alert("Pas de token trouvé. Vous êtes peut-être déjà déconnecté.");
+        return;
+    }
+
+    // Envoyer une requête à l'API Laravel pour informer de la déconnexion
+    try {
+        const response = await fetch(`${apiUrl}/logout`, {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + token,  // Utiliser le token récupéré
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ token: token })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Supprimer le token de localStorage après une déconnexion réussie
+            localStorage.removeItem('token');
+            alert("Déconnexion réussie !");
+            
+            // Rediriger vers la page de connexion ou une autre page
+            window.location.href = '../home.html';
+        } else {
+            alert("Erreur lors de la déconnexion : " + data.message);
+        }
+    } catch (error) {
+        console.log("Erreur réseau:", error);
+    }
+}
+
+ </script>
+ 
+ <style>
+     .notification-item:hover {
+         background-color: #f9f9f9;
+     }
+ 
+     #notificationIcon {
+         position: relative;
+     }
+ 
+     .notification-count {
+         position: absolute;
+         top: 0;
+         right: 0;
+         font-size: 0.8rem;
+     }
+
+     
+ </style>
+
+</body>
+
+</html>
